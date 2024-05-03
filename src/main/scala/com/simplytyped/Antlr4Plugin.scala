@@ -28,6 +28,7 @@ object Antlr4Plugin extends AutoPlugin {
   object autoImport {
     val Antlr4 = config("antlr4")
     val antlr4Version = settingKey[String]("Version of antlr4")
+    val antlr4ExtraArgs = settingKey[Seq[String]]("Extra parameters to pass to antlr4 tool")
     val antlr4Generate = taskKey[Seq[File]]("Generate classes from antlr4 grammars")
     val antlr4RuntimeDependency = settingKey[ModuleID]("Library dependency for antlr4 runtime")
     val antlr4Dependency = settingKey[ModuleID]("Build dependency required for parsing grammars")
@@ -35,6 +36,7 @@ object Antlr4Plugin extends AutoPlugin {
     val antlr4GenListener = settingKey[Boolean]("Generate listener")
     val antlr4GenVisitor = settingKey[Boolean]("Generate visitor")
     val antlr4TreatWarningsAsErrors = settingKey[Boolean]("Treat warnings as errors when generating parser")
+    val antlr4SourceDirectory = settingKey[File]("Location of antlr4 grammars")
   }
   import autoImport._
 
@@ -45,6 +47,7 @@ object Antlr4Plugin extends AutoPlugin {
     val classpath = (Antlr4 / managedClasspath).value.files
     val log = streams.value.log
     val packageName = (Antlr4 / antlr4PackageName).value
+    val extraArgs = (Antlr4 / antlr4ExtraArgs).value
     val listenerOpt = (Antlr4 / antlr4GenListener).value
     val visitorOpt = (Antlr4 / antlr4GenVisitor).value
     val warningsAsErrorOpt = (Antlr4 / antlr4TreatWarningsAsErrors).value
@@ -56,12 +59,13 @@ object Antlr4Plugin extends AutoPlugin {
           classpath = classpath,
           log = log,
           packageName = packageName,
+          extraArgs = extraArgs,
           listenerOpt = listenerOpt,
           visitorOpt = visitorOpt,
           warningsAsErrorOpt = warningsAsErrorOpt
         )
     }
-    cachedCompile(((Antlr4 / sourceDirectory).value ** "*.g4").get.toSet).toSeq
+    cachedCompile(((Antlr4 / antlr4SourceDirectory).value ** "*.g4").get.toSet).toSeq
   }
 
   def runAntlr(
@@ -70,6 +74,7 @@ object Antlr4Plugin extends AutoPlugin {
       classpath: Seq[File],
       log: Logger,
       packageName: Option[String],
+      extraArgs: Seq[String],
       listenerOpt: Boolean,
       visitorOpt: Boolean,
       warningsAsErrorOpt: Boolean) = {
@@ -80,22 +85,23 @@ object Antlr4Plugin extends AutoPlugin {
     val visitorArgs = if(visitorOpt) Seq("-visitor") else Seq("-no-visitor")
     val warningAsErrorArgs = if (warningsAsErrorOpt) Seq("-Werror") else Seq.empty
     val sourceArgs = srcFiles.map{_.toString}
-    val args = baseArgs ++ packageArgs ++ listenerArgs ++ visitorArgs ++ warningAsErrorArgs ++ sourceArgs
+    val args = baseArgs ++ packageArgs ++ listenerArgs ++ visitorArgs ++ extraArgs ++ warningAsErrorArgs ++ sourceArgs
     val exitCode = Process("java", args) ! log
     if(exitCode != 0) sys.error(s"Antlr4 failed with exit code $exitCode")
     (targetDir ** "*.java").get.toSet
   }
 
   override def projectSettings = inConfig(Antlr4)(Seq(
-    sourceDirectory := (Compile / sourceDirectory).value / "antlr4",
+    antlr4SourceDirectory := (Compile / sourceDirectory).value / "antlr4",
     javaSource := (Compile / sourceManaged).value / "antlr4",
     managedClasspath := Classpaths.managedJars(configuration.value, classpathTypes.value, update.value),
-    antlr4Version := "4.8-1",
+    antlr4Version := "4.13.1",
     antlr4Generate := antlr4GeneratorTask.value,
     antlr4Dependency := "org.antlr" % "antlr4" % antlr4Version.value,
     antlr4RuntimeDependency := "org.antlr" % "antlr4-runtime" % antlr4Version.value,
     antlr4BuildDependency := antlr4Dependency.value % Antlr4.name,
     antlr4PackageName := None,
+    antlr4ExtraArgs := Seq.empty,
     antlr4GenListener := true,
     antlr4GenVisitor := false,
     antlr4TreatWarningsAsErrors := false
@@ -103,7 +109,7 @@ object Antlr4Plugin extends AutoPlugin {
     ivyConfigurations += Antlr4,
     Compile / managedSourceDirectories += (Antlr4 / javaSource).value,
     Compile / sourceGenerators += (Antlr4 / antlr4Generate).taskValue,
-    watchSources += new Source(sourceDirectory.value, "*.g4", HiddenFileFilter),
+    watchSources += new Source((Antlr4 / antlr4SourceDirectory).value, "*.g4", HiddenFileFilter),
     cleanFiles += (Antlr4 / javaSource).value,
     libraryDependencies += (Antlr4 / antlr4BuildDependency).value,
     libraryDependencies += (Antlr4 / antlr4RuntimeDependency).value

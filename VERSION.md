@@ -1,5 +1,7 @@
 ## Version History
 
+  - `0.8.4`: Antlr 4.13.1, adding generic parameters support and grammar file location customization
+
   - `0.8.3`: Antlr 4.8-1
 
   - `0.8.2`: Antlr 4.7.2, adding -Werror option (@dilipbiswal)

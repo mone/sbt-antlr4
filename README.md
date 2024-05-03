@@ -30,7 +30,7 @@ Now, whenever you invoke `sbt compile` the ANTLR artifacts will be written to
 
 You can select an antl4 version with:
 
-    antlr4Version in Antlr4 := "4.8-1" // default: 4.8-1
+    antlr4Version in Antlr4 := "4.8-1" // default: 4.13.1
 
 `-package` option can be defined by the following setting:
 
@@ -43,6 +43,14 @@ You can also adjust `-listener`, `-no-listener`, `-visitor`, `-no-visitor`, `-We
     antlr4GenVisitor in Antlr4 := false // default: false
 
     antlr4TreatWarningsAsErrors in Antlr4 := true // default: false
+
+Any other flag can be specified manually with:
+
+    antlr4ExtraArgs in Antlr4 := Seq("-Dlanguage=JavaScript") // default: Seq()
+
+You can change the location of the grammar files with:
+
+    antlr4SourceDirectory in Antlr4 := baseDirectory.value / "antlr4" // default: (Compile / sourceDirectory).value / "antlr4"
  
 ## License
 
